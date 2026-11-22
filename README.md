@@ -2,18 +2,33 @@
 
 เว็บส่งต่อสิ่งของฟรีในชุมชนสำหรับวิชา CS319 Internet Programming ผู้ชมเลือกพื้นที่และดูประกาศได้ทันที สมาชิกใช้บัญชีเดียวเพื่อให้ของ ขอรับ และเข้าคิวสำรอง เจ้าของและผู้รับที่ยืนยันสิทธิ์แล้วจึงเห็นจุดนัดละเอียดและช่องทางติดต่อ
 
-![หน้าสำรวจของ HaiKan](docs/screenshots/catalog.png)
+## เริ่มใช้งานหลังดาวน์โหลด ZIP จาก GitHub
 
-## เปิดโปรเจกต์บนเครื่อง
+**1. แตก ZIP แล้วเปิด Terminal ในโฟลเดอร์หลัก** ปกติชื่อ `HaiKan-main` ให้ดูว่าในโฟลเดอร์เดียวกันมี `package-lock.json`, `client` และ `server` โปรเจกต์นี้ทดสอบด้วย Node.js 24 และ npm 11
 
-ทดสอบด้วย Windows, Node.js 24 และ npm 11 จากรากโปรเจกต์ให้ใช้คำสั่งด้านล่าง ใน PowerShell ที่จำกัดการเรียก npm.ps1 ให้พิมพ์ `npm.cmd` แทน `npm`
+**2. รัน `npm ci` เป็นคำสั่งแรก** เพื่อติดตั้งแพ็กเกจของทั้ง client และ server ในครั้งเดียว จากนั้นสร้าง Prisma Client
 
 ```powershell
 npm ci
 npm run generate -w server
 ```
 
-### ตั้งค่า Supabase
+**3. เชื่อมฐานข้อมูลของกลุ่ม** ถ้าใช้ Supabase เดิมที่เตรียมไว้แล้ว ให้นำไฟล์ `server/.env` จากเครื่องเดิมมาวางในโฟลเดอร์ `server` ผ่านช่องทางส่วนตัว แล้วรันคำสั่งนี้จากโฟลเดอร์หลัก
+
+```powershell
+npm run check:db -w server
+```
+
+**4. เปิดเว็บ** เมื่อทั้ง runtime และ migration แสดงว่าเชื่อมต่อสำเร็จ และฐานเดิมมี migration ครบแล้ว ให้เปิด Terminal สองหน้าต่างในโฟลเดอร์หลัก
+
+| หน้าต่าง | คำสั่ง |
+|---|---|
+| Terminal 1 | `npm run dev:server` |
+| Terminal 2 | `npm run dev:client` |
+
+เปิด **http://localhost:5173** และเปิดทั้งสอง Terminal ค้างไว้ระหว่างใช้งาน ครั้งต่อไปบนเครื่องเดิมเริ่มจากขั้นที่ 4 ได้เลย หาก PowerShell บล็อก `npm.ps1` ให้พิมพ์ `npm.cmd` แทน `npm` เช่น `npm.cmd ci`
+
+### กรณีตั้งค่า Supabase ใหม่
 
 1. เปิด `server/.env` ในเครื่อง ถ้าเพิ่งแตก ZIP ให้คัดลอก `server/.env.example` เป็น `server/.env` ก่อน เมื่อตั้งค่าไว้แล้วให้เก็บไฟล์เดิม
 2. ใช้ข้อมูลจากปุ่ม **Connect** ของ Supabase โปรเจกต์เดียวกัน ใส่ `DATABASE_URL` เป็น Shared Transaction Pooler พอร์ต **6543** พร้อม `pgbouncer=true` และใส่ `DIRECT_URL` เป็น Shared Session Pooler พอร์ต **5432** ใช้ชื่อผู้ใช้ของ pooler ที่มี project reference ตามที่ Supabase แสดง หากรหัสผ่านมีอักขระพิเศษให้ URL-encode เฉพาะรหัสผ่าน
