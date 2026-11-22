@@ -1,0 +1,28 @@
+{
+  "name": "haikan-client",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc --noEmit && vite build",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@tanstack/react-query": "^5.104.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "react-router": "^7.9.0",
+    "zustand": "^5.0.15",
+    "lucide-react": "0.468.0"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "daisyui": "^5.7.46",
+    "vite": "^8.1.5",
+    "@vitejs/plugin-react": "^6.0.3",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "typescript": "5.9.3"
+  }
+}

@@ -1,0 +1,12 @@
+CREATE UNIQUE INDEX claim_one_holder ON "Claim" ("itemId")
+WHERE state IN ('CONFIRMED','RESCHEDULE','OFFERED');
+CREATE UNIQUE INDEX claim_one_active_per_member ON "Claim" ("itemId","userId")
+WHERE state IN ('CONFIRMED','RESCHEDULE','OFFERED','WAITING');
+
+-- Supabase Data API roles have no direct table access. Express checks each request.
+ALTER TABLE "User" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Session" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Item" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Claim" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Report" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "Decision" ENABLE ROW LEVEL SECURITY;

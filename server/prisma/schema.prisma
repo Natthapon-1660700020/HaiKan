@@ -1,0 +1,119 @@
+generator client {
+  provider = "prisma-client-js"
+}
+datasource db {
+  provider = "postgresql"
+  url = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum Role {
+  MEMBER
+  ADMIN
+}
+enum ItemState {
+  OPEN
+  RESERVED
+  GIVEN
+  CLOSED
+}
+enum RequestState {
+  WAITING
+  OFFERED
+  CONFIRMED
+  RESCHEDULE
+  WITHDRAWN
+  EXPIRED
+  MISSED
+  COMPLETED
+  ENDED
+}
+model User {
+  id String @id @default(cuid())
+  email String @unique
+  name String
+  passwordHash String
+  role Role @default(MEMBER)
+  items Item[]
+  requests Claim[]
+  sessions Session[]
+  reports Report[]
+  decisions Decision[]
+}
+model Session {
+  tokenHash String @id
+  userId String
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expires DateTime
+}
+model Item {
+  id String @id @default(cuid())
+  title String
+  image String
+  photo ItemPhoto?
+  category String
+  condition String
+  description String
+  contents String?
+  province String
+  district String
+  community String
+  pickupPoint String
+  contact String
+  startsAt DateTime?
+  endsAt DateTime?
+  ownerId String
+  owner User @relation(fields: [ownerId], references: [id])
+  state ItemState @default(OPEN)
+  hiddenAt DateTime?
+  archivedAt DateTime?
+  needsWindow Boolean @default(false)
+  reason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  claims Claim[]
+  reports Report[]
+  decisions Decision[]
+  @@index([province, district])
+  @@index([state, hiddenAt])
+}
+model ItemPhoto {
+  id String @id @db.Uuid
+  itemId String @unique
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  content Bytes
+}
+model Claim {
+  id Int @id @default(autoincrement())
+  itemId String
+  item Item @relation(fields: [itemId], references: [id])
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  state RequestState
+  deadline DateTime?
+  reason String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@index([itemId, state, id])
+  @@index([userId])
+}
+model Report {
+  id Int @id @default(autoincrement())
+  itemId String
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  userId String
+  user User @relation(fields: [userId], references: [id])
+  reason String
+  createdAt DateTime @default(now())
+  @@unique([userId, itemId])
+}
+model Decision {
+  id Int @id @default(autoincrement())
+  itemId String
+  item Item @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  adminId String
+  admin User @relation(fields: [adminId], references: [id])
+  action String
+  reason String
+  createdAt DateTime @default(now())
+}
