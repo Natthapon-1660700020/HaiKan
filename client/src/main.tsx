@@ -19,6 +19,12 @@ import Account, { RequireUser } from './Account'
 import { Claims, Mine, Saved } from './Lists'
 import { useAction, useUser } from './api'
 import { Toast, notify, ErrorBox } from './ui'
+import '@fontsource/mitr/thai-400.css'
+import '@fontsource/mitr/thai-500.css'
+import '@fontsource/mitr/thai-600.css'
+import '@fontsource/mitr/latin-400.css'
+import '@fontsource/mitr/latin-500.css'
+import '@fontsource/mitr/latin-600.css'
 import './style.css'
 const queryClient = new QueryClient({
   defaultOptions: {
