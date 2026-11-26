@@ -7,3 +7,6 @@ server/.env
 .local/
 *.log
 *.zip
+/scripts/
+/docs/
+/server/tests/

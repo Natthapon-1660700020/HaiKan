@@ -114,15 +114,14 @@ items.post('/items', async (req, res) => {
     photo,
   } = await readItemForm(req, res)
   ensure(validWindow(data), 422, 'กรุณาตรวจสอบช่วงเวลานัดรับ')
-  const image = photo ? '/api/photos/' + photo.id : data.image
-  ensure(image, 422, 'กรุณาเลือกรูปภาพประกาศ')
+  ensure(photo, 422, 'กรุณาแนบรูปสิ่งของก่อนลงประกาศ')
   res.status(201).json(
     await db.item.create({
       data: {
         ...data,
-        image,
+        image: '/api/photos/' + photo.id,
         ownerId: user.id,
-        photo: photo ? { create: photo } : undefined,
+        photo: { create: photo },
       },
       select: { id: true },
     }),

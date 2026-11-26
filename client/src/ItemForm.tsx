@@ -1,8 +1,11 @@
 import { useEffect, useRef, useState, type FormEvent } from 'react'
 import { Link, useNavigate, useParams } from 'react-router'
 import { useAction, useDetail, useUser } from './api'
-import { categories, conditions, sampleImages, type Detail } from './model'
+import { categories, conditions, type Detail } from './model'
 import { ErrorBox, notify, Skeleton } from './ui'
+import provinces from './data/province.json'
+import districts from './data/district.json'
+
 function localTime(date: string | null | undefined) {
   if (!date) return ''
   const value = new Date(date)
@@ -32,7 +35,13 @@ export default function ItemForm({ item }: { item?: Detail }) {
   const [preview, setPreview] = useState('')
   const [fileError, setFileError] = useState('')
   const [category, setCategory] = useState(item?.category ?? categories[0])
-  const defaultImage = sampleImages[categories.indexOf(category)]
+  const [province, setProvince] = useState(item?.province ?? '')
+  const [district, setDistrict] = useState(item?.district ?? '')
+
+  const selectedProvince = provinces.find((p) => p.name.th === province)
+  const districtOptions = districts.filter(
+    (d) => d.province_id === selectedProvince?.id,
+  )
   useEffect(() => {
     if (!file) {
       setPreview('')
@@ -88,7 +97,6 @@ export default function ItemForm({ item }: { item?: Detail }) {
       contents: bundle ? fields.contents : null,
       startsAt: item?.hasHistory ? item.startsAt : startsAt,
       endsAt: item?.hasHistory ? item.endsAt : endsAt,
-      image: !item && !file ? defaultImage : undefined,
     }
     const upload = new FormData()
     if (file) {
@@ -183,14 +191,15 @@ export default function ItemForm({ item }: { item?: Detail }) {
         </label>
         <div className="photo-field">
           <label htmlFor="item-photo">รูปภาพสิ่งของ</label>
-          <img
-            src={preview || item?.image || defaultImage}
+          {(preview || item?.image) && <img
+            src={preview || item?.image}
             alt="ตัวอย่างรูปภาพประกาศ"
-          />
+          />}
           <input
             id="item-photo"
             ref={fileInput}
             type="file"
+            required={!item?.image}
             accept="image/jpeg,image/png,image/webp"
             aria-describedby="photo-help"
             aria-invalid={!!fileError}
@@ -200,7 +209,7 @@ export default function ItemForm({ item }: { item?: Detail }) {
             เลือก JPG, PNG หรือ WebP ขนาดไม่เกิน 5 MB
             {item
               ? ' · เลือกไฟล์ใหม่เพื่อเปลี่ยนรูปเดิม'
-              : ' · หากเว้นว่างจะใช้ภาพตามหมวดหมู่'}
+              : ' · ต้องแนบรูปสิ่งของก่อนลงประกาศ'}
           </small>
           {fileError && (
             <span role="alert" className="photo-error">
@@ -231,8 +240,47 @@ export default function ItemForm({ item }: { item?: Detail }) {
         </label>
         <h2>พื้นที่และการนัดรับ</h2>
         <div className="form-row">
-          {field('จังหวัด', 'province', item?.province, true, 90)}
-          {field('อำเภอ/เขต', 'district', item?.district, true, 90)}
+          <label>
+            จังหวัด
+            <select
+              name="province"
+              required
+              value={province}
+              onChange={(e) => {
+                setProvince(e.target.value)
+                setDistrict('')
+              }}
+            >
+              <option value="">เลือกจังหวัด</option>
+              {item?.province && !provinces.some((p) => p.name.th === item.province) && (
+                <option value={item.province}>{item.province} (ข้อมูลเดิม)</option>
+              )}
+              {provinces.map((p) => (
+                <option key={p.id} value={p.name.th}>{p.name.th}</option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            อำเภอ/เขต
+            <select
+              name="district"
+              required
+              disabled={!province}
+              value={district}
+              onChange={(e) => setDistrict(e.target.value)}
+            >
+              <option value="">{province ? 'เลือกอำเภอ/เขต' : 'เลือกจังหวัดก่อน'}</option>
+              {item?.district &&
+                province === item.province &&
+                !districtOptions.some((d) => d.name.th === item.district) && (
+                  <option value={item.district}>{item.district} (ข้อมูลเดิม)</option>
+                )}
+              {districtOptions.map((d) => (
+                <option key={d.id} value={d.name.th}>{d.name.th}</option>
+              ))}
+            </select>
+          </label>
         </div>
         {field('ชื่อชุมชน (ถ้ามี)', 'community', item?.community, false, 120)}
         {item?.hasHistory ? (

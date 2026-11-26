@@ -1,3 +1,5 @@
+import { useState } from 'react'
+import { Modal } from './Modal'
 import { Link } from 'react-router'
 import { Plus } from 'lucide-react'
 import { useQueries } from '@tanstack/react-query'
@@ -35,6 +37,8 @@ export function Mine() {
 }
 export function Claims() {
   const q = useClaims()
+  const [selected, setSelected] = useState<number | null>(null)
+  const c = q.data?.find((row) => row.id === selected)
   return (
     <>
       <h1 className="page-title">คำขอของฉัน</h1>
@@ -43,50 +47,82 @@ export function Claims() {
       ) : q.error ? (
         <ErrorBox error={q.error} retry={() => void q.refetch()} />
       ) : q.data.length ? (
-        <div className="record-list">
-          {q.data.map((c) => (
-            <article className="panel claim-row" key={c.id}>
+        <div className="panel">
+          <table className="table management-table">
+            <thead>
+              <tr>
+                <th scope="col">ประกาศ</th>
+                <th scope="col">คำขอของฉัน</th>
+                <th scope="col">ครบกำหนด</th>
+                <th scope="col">จัดการ</th>
+              </tr>
+            </thead>
+            <tbody>
+              {q.data.map((row) => (
+                <tr key={row.id}>
+                  <td data-label="ประกาศ">
+                    <div className="claim-item-summary">
+                    <div className="claim-item-photo"><Picture src={row.item.image} alt={'รูป ' + row.item.title} /></div>
+                    {row.item.hiddenAt ? (
+                      row.item.title
+                    ) : (
+                      <Link to={'/items/' + row.itemId}>{row.item.title}</Link>
+                    )}
+                    </div>
+                  </td>
+                  <td data-label="คำขอของฉัน">
+                    {claimStates[row.state]}
+                    {row.position ? ' · คิวที่ ' + row.position : ''}
+                  </td>
+                  <td data-label="ครบกำหนด">
+                    {row.deadline ? formatTime(row.deadline) : '—'}
+                  </td>
+                  <td data-label="จัดการ">
+                    <button
+                      className="secondary"
+                      onClick={() => setSelected(row.id)}
+                    >
+                      ดูคำขอ
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {c && (
+            <Modal title={c.item.title} close={() => setSelected(null)}>
               <div className="thumb">
                 <Picture src={c.item.image} alt="" />
               </div>
-              <div>
-                <h2>
-                  {c.item.hiddenAt ? (
-                    c.item.title
-                  ) : (
-                    <Link to={'/items/' + c.itemId}>{c.item.title}</Link>
-                  )}
-                </h2>
-                <strong>
-                  {claimStates[c.state]}
-                  {c.position ? ' · คิวที่ ' + c.position : ''}
-                </strong>
+              <strong>
+                {claimStates[c.state]}
+                {c.position ? ' · คิวที่ ' + c.position : ''}
+              </strong>
+              <p>
+                {c.item.hiddenAt
+                  ? 'อยู่ระหว่างตรวจสอบ · ระงับการจอง'
+                  : states[c.item.state]}{' '}
+                ·{' '}
+                {c.state === 'CONFIRMED' && !c.item.endsAt
+                  ? 'รอนัดรับ'
+                  : windowText(c.item)}
+              </p>
+              {c.deadline && <p>ครบกำหนด {formatTime(c.deadline)}</p>}
+              {[...new Set([c.reason, c.item.reason].filter(Boolean))].map(
+                (r) => (
+                  <p key={r}>เหตุผล · {r}</p>
+                ),
+              )}
+              {c.pickup && (
                 <p>
-                  {c.item.hiddenAt
-                    ? 'อยู่ระหว่างตรวจสอบ · ระงับการจอง'
-                    : states[c.item.state]}{' '}
-                  ·{' '}
-                  {c.state === 'CONFIRMED' && !c.item.endsAt
-                    ? 'รอนัดรับ'
-                    : windowText(c.item)}
+                  จุดนัดรับ · {c.pickup.pickupPoint}
+                  <br />
+                  ติดต่อ · {c.pickup.contact}
                 </p>
-                {c.deadline && <p>ครบกำหนด {formatTime(c.deadline)}</p>}
-                {[...new Set([c.reason, c.item.reason].filter(Boolean))].map(
-                  (r) => (
-                    <p key={r}>เหตุผล · {r}</p>
-                  ),
-                )}
-                {c.pickup && (
-                  <p>
-                    จุดนัดรับ · {c.pickup.pickupPoint}
-                    <br />
-                    ติดต่อ · {c.pickup.contact}
-                  </p>
-                )}
-                <ClaimActions claim={c} />
-              </div>
-            </article>
-          ))}
+              )}
+              <ClaimActions claim={c} />
+            </Modal>
+          )}
         </div>
       ) : (
         <Empty>คุณยังไม่มีคำขอรับสิ่งของ</Empty>

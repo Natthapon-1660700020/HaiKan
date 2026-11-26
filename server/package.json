@@ -7,7 +7,6 @@
     "start": "node dist/src/index.js",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "test:queue": "tsx tests/acceptance.ts",
     "check:db": "tsx src/checkConnection.ts",
     "generate": "prisma generate",
     "migrate": "prisma migrate deploy",

@@ -1,3 +1,4 @@
+import { Modal } from './Modal'
 import { useState, type FormEvent } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { useNavigate } from 'react-router'
@@ -7,6 +8,7 @@ import { ErrorBox, notify } from './ui'
 
 export function ClaimActions({ claim }: { claim: MyClaim }) {
   const action = useAction()
+  const [withdraw, setWithdraw] = useState(false)
   if (
     claim.item.hiddenAt ||
     !['WAITING', 'OFFERED', 'CONFIRMED', 'RESCHEDULE'].includes(claim.state)
@@ -19,7 +21,12 @@ export function ClaimActions({ claim }: { claim: MyClaim }) {
         method: 'PATCH',
         body: { action: choice },
       },
-      { onSuccess: () => notify('อัปเดตคำขอแล้ว') },
+      {
+        onSuccess: () => {
+          setWithdraw(false)
+          notify('อัปเดตคำขอแล้ว')
+        },
+      },
     )
   return (
     <>
@@ -38,13 +45,32 @@ export function ClaimActions({ claim }: { claim: MyClaim }) {
           className="secondary"
           disabled={action.isPending}
           onClick={() => {
-            if (window.confirm('ยืนยันการสละสิทธิ์ในคำขอนี้หรือไม่')) act('withdraw')
+            action.reset()
+            setWithdraw(true)
           }}
         >
           สละสิทธิ์
         </button>
       </div>
-      <ErrorBox error={action.error} />
+      {withdraw ? (
+        <Modal
+          title="สละสิทธิ์"
+          close={() => setWithdraw(false)}
+          busy={action.isPending}
+        >
+          <p>ยืนยันการสละสิทธิ์สำหรับ {claim.item.title} หรือไม่?</p>
+          <ErrorBox error={action.error} />
+          <button
+            className="danger"
+            disabled={action.isPending}
+            onClick={() => act('withdraw')}
+          >
+            ยืนยันสละสิทธิ์
+          </button>
+        </Modal>
+      ) : (
+        <ErrorBox error={action.error} />
+      )}
     </>
   )
 }
@@ -52,6 +78,11 @@ export function OwnerTools({ item }: { item: Detail }) {
   const action = useAction(),
     navigate = useNavigate(),
     [tool, setTool] = useState('')
+  const [confirmation, setConfirmation] = useState<{
+    title: string
+    message: string
+    run: () => void
+  } | null>(null)
   const history = useQuery({
     queryKey: ['history', item.id],
     queryFn: () =>
@@ -66,6 +97,7 @@ export function OwnerTools({ item }: { item: Detail }) {
       { path, method, body },
       {
         onSuccess: () => {
+          setConfirmation(null)
           setTool('')
           notify('อัปเดตประกาศแล้ว')
           if (method === 'DELETE') navigate('/mine')
@@ -97,13 +129,12 @@ export function OwnerTools({ item }: { item: Detail }) {
             className="secondary"
             disabled={action.isPending}
             onClick={() => {
-              if (
-                window.confirm(
-                  'นำประกาศออกจากหน้าสาธารณะหรือไม่? เจ้าของและผู้ที่เคยขอรับยังดูประวัติได้',
-                )
-              ) {
-                send(base + '/archive', 'PATCH')
-              }
+              action.reset()
+              setConfirmation({
+                title: 'นำออกจากหน้าสาธารณะ',
+                message: item.title + ' จะยังอยู่ในประวัติของผู้เกี่ยวข้อง',
+                run: () => send(base + '/archive', 'PATCH'),
+              })
             }}
           >
             นำออกจากหน้าสาธารณะ
@@ -132,8 +163,12 @@ export function OwnerTools({ item }: { item: Detail }) {
                 className="danger"
                 disabled={action.isPending}
                 onClick={() => {
-                  if (window.confirm('ยืนยันการลบประกาศนี้หรือไม่'))
-                    send(base, 'DELETE')
+                  action.reset()
+                  setConfirmation({
+                    title: 'ลบประกาศ',
+                    message: 'ลบ ' + item.title + ' ถาวรหรือไม่?',
+                    run: () => send(base, 'DELETE'),
+                  })
                 }}
               >
                 ลบประกาศ
@@ -141,34 +176,59 @@ export function OwnerTools({ item }: { item: Detail }) {
             )}
           </div>
           {tool && (
-            <form key={tool} onSubmit={submit}>
-              {tool === 'window' && (
-                <div className="form-row">
-                  <label>
-                    วันเวลาเริ่ม
-                    <input required type="datetime-local" name="start" />
-                  </label>
-                  <label>
-                    วันเวลาสิ้นสุด
-                    <input required type="datetime-local" name="end" />
-                  </label>
-                </div>
-              )}
-              <label>
-                {tool === 'window' ? 'เหตุผลที่กำหนดนัดใหม่' : 'เหตุผลที่ปิดประกาศ'}
-                <textarea required name="reason" maxLength={500} />
-              </label>
-              <button className="primary" disabled={action.isPending}>
-                {tool === 'window' ? 'เสนอช่วงนัดรับ' : 'ยืนยันปิดประกาศ'}
-              </button>
-            </form>
+            <Modal
+              title={tool === 'window' ? 'กำหนดนัดใหม่' : 'ปิดประกาศ'}
+              close={() => setTool('')}
+              busy={action.isPending}
+            >
+              <p>{item.title}</p>
+              <form key={tool} onSubmit={submit}>
+                {tool === 'window' && (
+                  <div className="form-row">
+                    <label>
+                      วันเวลาเริ่ม
+                      <input required type="datetime-local" name="start" />
+                    </label>
+                    <label>
+                      วันเวลาสิ้นสุด
+                      <input required type="datetime-local" name="end" />
+                    </label>
+                  </div>
+                )}
+                <label>
+                  {tool === 'window' ? 'เหตุผลที่กำหนดนัดใหม่' : 'เหตุผลที่ปิดประกาศ'}
+                  <textarea required name="reason" maxLength={500} />
+                </label>
+                <button className="primary" disabled={action.isPending}>
+                  {tool === 'window' ? 'เสนอช่วงนัดรับ' : 'ยืนยันปิดประกาศ'}
+                </button>
+                <ErrorBox error={action.error} />
+              </form>
+            </Modal>
           )}
         </>
       )}
       <ErrorBox
-        error={action.error || history.error}
+        error={history.error || (!tool && !confirmation ? action.error : null)}
         retry={history.error ? () => void history.refetch() : undefined}
       />
+      {confirmation && (
+        <Modal
+          title={confirmation.title}
+          close={() => setConfirmation(null)}
+          busy={action.isPending}
+        >
+          <p>{confirmation.message}</p>
+          <ErrorBox error={action.error} />
+          <button
+            className="primary"
+            disabled={action.isPending}
+            onClick={confirmation.run}
+          >
+            ยืนยัน
+          </button>
+        </Modal>
+      )}
       {history.isPending ? (
         <p>กำลังโหลดคำขอ…</p>
       ) : history.data?.length ? (
@@ -204,10 +264,16 @@ export function OwnerTools({ item }: { item: Detail }) {
                         c.state !== 'CONFIRMED'
                       }
                       onClick={() => {
-                        if (window.confirm('ส่งมอบสิ่งของให้ผู้รับจริงแล้วหรือไม่'))
-                          send(base + '/claims/' + c.id, 'PATCH', {
-                            action: 'complete',
-                          })
+                        action.reset()
+                        setConfirmation({
+                          title: 'ส่งต่อแล้ว',
+                          message:
+                            'ส่งต่อแล้ว · ' + c.user.name + ' · ' + item.title,
+                          run: () =>
+                            send(base + '/claims/' + c.id, 'PATCH', {
+                              action: 'complete',
+                            }),
+                        })
                       }}
                     >
                       ส่งต่อแล้ว
@@ -220,10 +286,19 @@ export function OwnerTools({ item }: { item: Detail }) {
                           className="danger"
                           disabled={action.isPending}
                           onClick={() => {
-                            if (window.confirm('ยืนยันว่าผู้รับผิดนัดหรือไม่'))
-                              send(base + '/claims/' + c.id, 'PATCH', {
-                                action: 'missed',
-                              })
+                            action.reset()
+                            setConfirmation({
+                              title: 'ยืนยันว่าผิดนัด',
+                              message:
+                                'ยืนยันว่าผิดนัด · ' +
+                                c.user.name +
+                                ' · ' +
+                                item.title,
+                              run: () =>
+                                send(base + '/claims/' + c.id, 'PATCH', {
+                                  action: 'missed',
+                                }),
+                            })
                           }}
                         >
                           ยืนยันว่าผิดนัด
@@ -249,30 +324,36 @@ export function ReportForm({ id }: { id: string }) {
         รายงานประกาศ
       </button>
       {open && (
-        <form
-          onSubmit={(e) => {
-            e.preventDefault()
-            const reason = new FormData(e.currentTarget).get('reason')
-            action.mutate(
-              { path: '/items/' + id + '/report', body: { reason } },
-              {
-                onSuccess: () => {
-                  notify('ส่งรายงานให้ผู้ดูแลแล้ว')
-                  setOpen(false)
-                },
-              },
-            )
-          }}
+        <Modal
+          title="รายงานประกาศ"
+          close={() => setOpen(false)}
+          busy={action.isPending}
         >
-          <label>
-            เหตุผลที่รายงาน
-            <textarea name="reason" required maxLength={500} />
-          </label>
-          <button className="secondary" disabled={action.isPending}>
-            ส่งรายงาน
-          </button>
-          <ErrorBox error={action.error} />
-        </form>
+          <form
+            onSubmit={(e) => {
+              e.preventDefault()
+              const reason = new FormData(e.currentTarget).get('reason')
+              action.mutate(
+                { path: '/items/' + id + '/report', body: { reason } },
+                {
+                  onSuccess: () => {
+                    notify('ส่งรายงานให้ผู้ดูแลแล้ว')
+                    setOpen(false)
+                  },
+                },
+              )
+            }}
+          >
+            <label>
+              เหตุผลที่รายงาน
+              <textarea name="reason" required maxLength={500} />
+            </label>
+            <button className="secondary" disabled={action.isPending}>
+              ส่งรายงาน
+            </button>
+            <ErrorBox error={action.error} />
+          </form>
+        </Modal>
       )}
     </section>
   )
